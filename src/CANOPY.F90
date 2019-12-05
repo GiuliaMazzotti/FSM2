@@ -21,8 +21,6 @@ use PARAMETERS, only: &
 
 use PARAMMAPS, only: &
   fveg,              &! Canopy cover fraction
-  fsky,              &! Sky view fraction
-  trcn,              &! Canopy transmissivity
   scap                ! Canopy snow capacity (kg/m^2)
 
 use STATE_VARIABLES, only: &
@@ -55,7 +53,7 @@ do i = 1, Nx
   ! interception
     intcpt(i,j) = (scap(i,j) - Sveg(i,j))*(1 - exp(-fveg(i,j)*Sf(i,j)*dt/scap(i,j)))
     Sveg(i,j) = Sveg(i,j) + intcpt(i,j)
-    Sf(i,j) = (1.1-0.2*fveg(i,j))*Sf(i,j) - intcpt(i,j)/dt
+    Sf(i,j) = Sf(i,j) - intcpt(i,j)/dt
 
   ! sublimation
     Evegs = 0
@@ -70,13 +68,7 @@ do i = 1, Nx
     unload(i,j) = Sveg(i,j)*dt/tunl
     Sveg(i,j) = Sveg(i,j) - unload(i,j)
 
-  else if (fsky(i,j)*trcn(i,j) < 1) then
-
-    ! correct precip for points within canopy with fveg = 0
-    Sf(i,j) = 1.1*Sf(i,j)
-
   end if
-
 end do
 end do
 

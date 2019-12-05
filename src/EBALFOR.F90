@@ -79,7 +79,6 @@ real :: &
   x(4)                ! Temperature and humidity increments
 
 real :: &
-  KWa(Nx,Ny),        &! Sublimation tweak         
   Dsrf,              &! dQsat/dT at surface temperature (1/K)
   Dveg,              &! dQsat/dT at vegetation temperature (1/K)
   dEs,               &! Change in surface moisture flux (kg/m^2/s)
@@ -117,11 +116,8 @@ do i = 1, Nx
     Dveg = Lveg*Qveg / (Rwat*Tveg(i,j)**2)
     rho = Ps(i,j) / (Rair*Ta(i,j))
 
-    ! Sublimation tweak
-    KWa(i,j) = KHa(i,j) 
-    if (Sveg(i,j) > epsilon(Sveg(i,j)))  KWa(i,j) = KHa(i,j)*2
     ! Explicit fluxes
-    E = rho*KWa(i,j)*(Qcan(i,j) - Qa(i,j))
+    E = rho*KHa(i,j)*(Qcan(i,j) - Qa(i,j))
     Esrf(i,j) = rho*KWg(i,j)*(Qsrf - Qcan(i,j))
     Eveg(i,j) = rho*KWv(i,j)*(Qveg - Qcan(i,j))
     G(i,j) = 2*ks1(i,j)*(Tsrf(i,j) - Ts1(i,j))/Ds1(i,j)
@@ -139,7 +135,7 @@ do i = 1, Nx
     A(1,3) = KHg(i,j)
     A(1,4) = KHv(i,j)
     b(1)   = (H(i,j) - Hveg - Hsrf(i,j)) / (rho*cp)
-    A(2,1) = - (KWa(i,j) + KWv(i,j) + KWg(i,j))
+    A(2,1) = - (KHa(i,j) + KWv(i,j) + KWg(i,j))
     A(2,2) = 0
     A(2,3) = Dsrf*KWg(i,j)
     A(2,4) = Dveg*KWv(i,j)

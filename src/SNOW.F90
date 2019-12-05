@@ -48,7 +48,6 @@ use STATE_VARIABLES, only: &
   rgrn,              &! Snow layer grain radius (m)
   Sice,              &! Ice content of snow layers (kg/m^2)
   Sliq,              &! Liquid content of snow layers (kg/m^2)
-  Tcan,              &! Canopy air space temperature (K)
   Tsnow,             &! Snow layer temperatures (K)
   Tsoil,             &! Soil layer temperatures (K)
   Tsrf                ! Surface skin temperature (K)
@@ -189,7 +188,6 @@ do i = 1, Nx
     end if
 
   ! Snow hydraulics
-    if (Ta(i,j) >= Tm) Roff(i,j) = Roff(i,j) + unload(i,j)
 #if HYDROL == 0
   ! Free-draining snow 
     do k = 1, Nsnow(i,j)
@@ -293,14 +291,12 @@ do i = 1, Nx
   Sice(1,i,j) = Sice(1,i,j) + dSice
 
 ! Add canopy unloading to layer 1 with bulk snow density and grain size
-  if (Ta(i,j) < Tm) then
-    rhos = rhof
-    mass = sum(Sice(:,i,j)) + sum(Sliq(:,i,j))
-    snowdepth = sum(Ds(:,i,j))
-    if (snowdepth > epsilon(snowdepth)) rhos = mass / snowdepth
-    Ds(1,i,j) = Ds(1,i,j) + unload(i,j) / rhos
-    Sice(1,i,j) = Sice(1,i,j) + unload(i,j)
-  end if
+  rhos = rhof
+  mass = sum(Sice(:,i,j)) + sum(Sliq(:,i,j))
+  snowdepth = sum(Ds(:,i,j))
+  if (snowdepth > epsilon(snowdepth)) rhos = mass / snowdepth
+  Ds(1,i,j) = Ds(1,i,j) + unload(i,j) / rhos
+  Sice(1,i,j) = Sice(1,i,j) + unload(i,j)
 
 ! New snowpack
   if (Nsnow(i,j) == 0 .and. Sice(1,i,j) > 0) then

@@ -2,7 +2,8 @@
 ! Surface energy balance in open areas or zero-layer forest canopy model
 !-----------------------------------------------------------------------
 subroutine EBALSRF(Ds1,KH,KHa,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1, &
-                   Esrf,Eveg,G,H,Hsrf,LE,LEsrf,Melt,Rnet,Rsrf)
+                   Esrf,Eveg,G,H,Hsrf,LE,LEsrf,Melt,Rnet,Rsrf, &
+                   LWsci,LWsrf,LWveg)
 
 #include "OPTS.h"
 
@@ -32,6 +33,7 @@ use PARAMMAPS, only: &
 
 use STATE_VARIABLES, only: &
   Sice,              &! Ice content of snow layers (kg/m^2)
+  Tcan,              &! Canopy air space temperature (K)
   Tsrf,              &! Surface temperature (K)
   Tveg                ! Vegetation temperature (K)
 
@@ -59,7 +61,10 @@ real, intent(out) :: &
   LEsrf(Nx,Ny),      &! Latent heat flux from the surface (W/m^2)
   Melt(Nx,Ny),       &! Surface melt rate (kg/m^2/s)
   Rnet(Nx,Ny),       &! Net radiation (W/m^2)
-  Rsrf(Nx,Ny)         ! Net radiation absorbed by the surface (W/m^2)
+  Rsrf(Nx,Ny),       &! Net radiation absorbed by the surface (W/m^2)
+  LWsci(Nx,Ny),      &! Subcanopy incoming LWR (W/m^2)
+  LWsrf(Nx,Ny),      &! Net LW radiation absorbed by the surface (W/m^2)
+  LWveg(Nx,Ny)        ! Net LW radiation absorbed by vegetation (W/m^2)
 
 integer :: & 
   i,j                 ! Point counters
@@ -86,6 +91,7 @@ do i = 1, Nx
 #endif
 
     Tveg(i,j) = Ta(i,j) 
+    Tcan(i,j) = Ta(i,j) 
 
     ! Saturation humidity and density of air
     call QSAT(Ps(i,j),Tsrf(i,j),Qs)
@@ -157,10 +163,17 @@ do i = 1, Nx
     Hsrf(i,j) = H(i,j)
     LEsrf(i,j) = LE(i,j)
     Rsrf(i,j) = Rnet(i,j)
+    LWsci(i,j) = LW(i,j)
+    LWsrf(i,j) = LWsci(i,j) - sb*Tsrf(i,j)**4
+    LWveg(i,j) = 0
+
 
 #if CANMOD == 0
     ! Add fluxes from canopy in zero-layer model
     Eveg(i,j) = 0
+    LWsci(i,j) = LW(i,j)
+    LWsrf(i,j) = LWsci(i,j) - sb*Tsrf(i,j)**4
+    LWveg(i,j) = 0
     if (fveg(i,j) > 0) then
       Eveg(i,j) = - KWv(i,j)*Esrf(i,j) / (KHa(i,j) + KWv(i,j))
       H(i,j) = KHa(i,j)*H(i,j) / (KHa(i,j) + KHv(i,j))
@@ -169,6 +182,9 @@ do i = 1, Nx
       LE(i,j) = LE(i,j) + Lh*Eveg(i,j)
       Rnet(i,j) = Rnet(i,j) + SWveg(i,j) +  &
                   (1 - trcn(i,j))*(LW(i,j) + sb*Tsrf(i,j)**4 - 2*sb*Tveg(i,j)**4)
+      LWsci(i,j) = trcn(i,j)*LW(i,j) + (1 - trcn(i,j))*sb*Tveg(i,j)**4
+      LWsrf(i,j) = LWsci(i,j) - sb*Tsrf(i,j)**4
+      LWveg(i,j) = (1 - trcn(i,j))*(LW(i,j) + sb*Tsrf(i,j)**4 - 2*sb*Tveg(i,j)**4) 
     end if
 #endif
 #if CANMOD == 1

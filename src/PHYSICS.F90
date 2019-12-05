@@ -59,12 +59,17 @@ real :: &
   SWsrf(Nx,Ny),      &! Net SW radiation absorbed by the surface (W/m^2)
   SWveg(Nx,Ny),      &! Net SW radiation absorbed by vegetation (W/m^2)
   Tveg0(Nx,Ny),      &! Vegetation temperature at start of timestep (K)
+  LWsci(Nx,Ny),      &! Subcanopy incoming LWR (W/m^2)
+  LWsrf(Nx,Ny),      &! Net LW radiation absorbed by the surface (W/m^2)
+  LWveg(Nx,Ny),      &! Net LW radiation absorbed by vegetation (W/m^2)
+  SWsci(Nx,Ny),      &! Subcanopy incoming SWR (W/m^2)
+  intcpt(Nx,Ny),     &! Canopy interception (kg/m^2)
   unload(Nx,Ny)       ! Snow mass unloaded from canopy (kg/m^2)
 
 integer :: & 
   n                   ! Iteration counter
 
-call RADIATION(alb,fsnow,SWsrf,SWveg)
+call RADIATION(alb,fsnow,SWsrf,SWveg,SWsci)
 
 call THERMAL(csoil,Ds1,gs1,ks1,ksnow,ksoil,Ts1,Tveg0)
 
@@ -74,20 +79,23 @@ do n = 1, Nitr
 
 #if CANMOD == 1
   call EBALFOR(Ds1,KHa,KHg,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1,Tveg0, &
-               Esrf,Eveg,G,H,Hsrf,LE,LEsrf,Melt,Rnet,Rsrf)
+               Esrf,Eveg,G,H,Hsrf,LE,LEsrf,Melt,Rnet,Rsrf, &
+               LWsci,LWsrf,LWveg)
 #endif
 
   call EBALSRF(Ds1,KH,KHa,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1, &
-               Esrf,Eveg,G,H,Hsrf,LE,LEsrf,Melt,Rnet,Rsrf)
+               Esrf,Eveg,G,H,Hsrf,LE,LEsrf,Melt,Rnet,Rsrf, &
+               LWsci,LWsrf,LWveg)
 
 end do
 
-call CANOPY(Eveg,unload)
+call CANOPY(Eveg,unload,intcpt)
 
 call SNOW(Esrf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff)
 
 call SOIL(csoil,Gsoil,ksoil)
 
-call CUMULATE(alb,G,Gsoil,H,Hsrf,LE,LEsrf,Melt,Rnet,Roff,Rsrf)
+call CUMULATE(alb,G,Gsoil,H,Hsrf,LE,LEsrf,Melt,Rnet,Roff,Rsrf, &
+              LWsci,LWsrf,LWveg,SWsci,SWsrf,SWveg,intcpt,unload)
 
 end subroutine PHYSICS

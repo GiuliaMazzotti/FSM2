@@ -33,6 +33,8 @@ use PARAMMAPS, only: &
   hcan,              &! Canopy height (m)
   fveg,              &! Canopy cover fraction
   VAI,               &! Vegetation area index
+  fsky,              &! Sky view fraction
+  trcn,              &! Canopy transmissivity
   z0sf                ! Snow-free surface roughness length (m)
 
 use STATE_VARIABLES, only : &
@@ -128,7 +130,8 @@ do i = 1, Nx
     end if
   else
     KHa(i,j) = fh*vkman*ustar / log((zT1 - dh)/z0)
-    KHg(i,j) = vkman*ustar*((1 - fveg(i,j))*fh/log(z0/z0h) + fveg(i,j)*cden/(1 + 0.5*Ric))
+    ! KHg(i,j) = vkman*ustar*((1 - fveg(i,j))*fh/log(z0/z0h) + fveg(i,j)*cden/(1 + 0.5*Ric))
+    KHg(i,j) = vkman*ustar*(fsky(i,j)*trcn(i,j)*fh/log(z0/z0h) + (1-fsky(i,j)*trcn(i,j))*cden/(1 + 0.5*Ric))
     KHv(i,j) = sqrt(ustar)*VAI(i,j)/cveg
     call QSAT(Ps(i,j),Tsrf(i,j),Qs)
     if (Qcan(i,j) > Qs) then

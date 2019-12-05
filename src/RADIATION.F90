@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 ! Surface and canopy net shortwave radiation
 !-----------------------------------------------------------------------
-subroutine RADIATION(alb,fsnow,SWsrf,SWveg)
+subroutine RADIATION(alb,fsnow,SWsrf,SWveg,SWsci)
 
 #include "OPTS.h"
 
@@ -56,7 +56,8 @@ real, intent(out) :: &
   alb(Nx,Ny),        &! Albedo
   fsnow(Nx,Ny),      &! Ground snowcover fraction
   SWsrf(Nx,Ny),      &! Net SW radiation absorbed by the surface (W/m^2)
-  SWveg(Nx,Ny)        ! Net SW radiation absorbed by vegetation (W/m^2)
+  SWveg(Nx,Ny),      &! Net SW radiation absorbed by vegetation (W/m^2)
+  SWsci(Nx,Ny)        ! Subcanopy incoming SWR (W/m^2)
 
 integer :: &
   i,j                 ! Point counters
@@ -150,6 +151,7 @@ do i = 1, Nx
   SWsrf(i,j) = (1 - acan)*(1 - asrf)*(tdif*Sdif + tdir*Sdir)
   SWveg(i,j) = (1 - acan)*(1 - (1 - asrf)*tdif - asrf*tdif*tdif)*Sdif +  &
                (1 - acan)*(1 - (1 - asrf)*tdir - asrf*tdif*tdir)*Sdir
+  SWsci(i,j) = (1 - acan)*(tdif*Sdif + tdir*Sdir)
 end do
 end do
 

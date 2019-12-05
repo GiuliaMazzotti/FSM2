@@ -39,7 +39,8 @@ use STATE_VARIABLES, only: &
   Tsnow,             &! Snow layer temperatures (K)
   Tsoil,             &! Soil layer temperatures (K)
   Tsrf,              &! Surface skin temperature (K)
-  Tveg                ! Vegetation temperature (K)
+  Tveg,              &! Vegetation temperature (K)
+  Tcan                ! Canopy air space temperature(K)
 
 implicit none
 
@@ -68,7 +69,7 @@ if (type == 'smp') then
   end do
   end do
   write(usmp,100) year,month,day,hour,snowdepth(:,:),SWE(:,:),Sveg(:,:),  &
-                                      Tsoil(2,:,:),Tsrf(:,:),Tveg(:,:)
+                      Tsoil(2,:,:),Tsrf(:,:),Tveg(:,:),Tcan(:,:),Tsnow(2,:,:)
 
   if (Nx*Ny == 1) then
     write(uprf,'(5i4)') year,month,day,Nsnow(1,1),Nsoil

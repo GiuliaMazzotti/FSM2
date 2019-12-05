@@ -53,7 +53,7 @@ do i = 1, Nx
   ! interception
     intcpt(i,j) = (scap(i,j) - Sveg(i,j))*(1 - exp(-fveg(i,j)*Sf(i,j)*dt/scap(i,j)))
     Sveg(i,j) = Sveg(i,j) + intcpt(i,j)
-    Sf(i,j) = Sf(i,j) - intcpt(i,j)/dt
+    Sf(i,j) = (1.1-0.2*fveg(i,j))*Sf(i,j) - intcpt(i,j)/dt
 
   ! sublimation
     Evegs = 0
@@ -67,7 +67,7 @@ do i = 1, Nx
     tunl = max(tunl, dt)
     unload(i,j) = Sveg(i,j)*dt/tunl
     Sveg(i,j) = Sveg(i,j) - unload(i,j)
-
+    
   end if
 end do
 end do

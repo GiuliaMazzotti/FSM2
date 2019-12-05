@@ -37,7 +37,7 @@ integer :: &
   Nave,              &! Number of timesteps in average outputs
   Nsmp                ! Timestep for sample outputs
 integer, parameter :: &
-  Ndiags = 18        ! Number of averaged diagnostics
+  Ndiags = 26        ! Number of averaged diagnostics
 real, allocatable :: &
   diags(:,:,:),      &! Averaged diagnostics
   SWin(:,:),         &! Cumulated incoming solar radiation (J/m^2)

@@ -64,7 +64,9 @@ real :: &
   LWveg(Nx,Ny),      &! Net LW radiation absorbed by vegetation (W/m^2)
   SWsci(Nx,Ny),      &! Subcanopy incoming SWR (W/m^2)
   intcpt(Nx,Ny),     &! Canopy interception (kg/m^2)
-  unload(Nx,Ny)       ! Snow mass unloaded from canopy (kg/m^2)
+  unload(Nx,Ny),     &! Snow mass unloaded from canopy (kg/m^2) 
+  Sbsrf(Nx,Ny),      &! Sublimation from the surface (kg/m^2)
+  Sbveg(Nx,Ny)        ! Sublimation from the vegetation (kg/m^2)
 
 integer :: & 
   n                   ! Iteration counter
@@ -89,13 +91,14 @@ do n = 1, Nitr
 
 end do
 
-call CANOPY(Eveg,unload,intcpt)
+call CANOPY(Eveg,unload,intcpt,Sbveg)
 
-call SNOW(Esrf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff)
+call SNOW(Esrf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff,Sbsrf)
 
 call SOIL(csoil,Gsoil,ksoil)
 
 call CUMULATE(alb,G,Gsoil,H,Hsrf,LE,LEsrf,Melt,Rnet,Roff,Rsrf, &
-              LWsci,LWsrf,LWveg,SWsci,SWsrf,SWveg,intcpt,unload)
+              LWsci,LWsrf,LWveg,SWsci,SWsrf,SWveg,intcpt,unload, & 
+              Sbsrf,Sbveg,KH,KHa,KHg,KHv,KWg,KWv)
 
 end subroutine PHYSICS

@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 ! Snow thermodynamics and hydrology
 !-----------------------------------------------------------------------
-subroutine SNOW(Esrf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff)
+subroutine SNOW(Esrf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff,Sbsrf)
 
 #include "OPTS.h"
 
@@ -65,7 +65,8 @@ real, intent(in) :: &
 
 real, intent(out) :: &
   Gsoil(Nx,Ny),      &! Heat flux into soil (W/m^2)
-  Roff(Nx,Ny)         ! Runoff from snow (kg/m^2)
+  Roff(Nx,Ny),       &! Runoff from snow (kg/m^2)
+  Sbsrf(Nx,Ny)        ! Sublimation from the surface (kg/m^2)
 
 integer :: &
   i,j,               &! Point counters
@@ -109,6 +110,8 @@ Roff(:,:) = Rf(:,:)*dt
 ! Points with existing snowpack
 do j = 1, Ny
 do i = 1, Nx
+  Sbsrf(i,j) = 0
+
   if (Nsnow(i,j) > 0) then  
 
   ! Heat conduction
@@ -179,10 +182,12 @@ do i = 1, Nx
         if (dSice > Sice(k,i,j)) then  ! Layer sublimates completely
           dSice = dSice - Sice(k,i,j)
           Ds(k,i,j) = 0
+          Sbsrf(i,j) = Sbsrf(i,j) + dSice
           Sice(k,i,j) = 0
         else                       ! Layer sublimates partially
           Ds(k,i,j) = (1 - dSice/Sice(k,i,j))*Ds(k,i,j)
           Sice(k,i,j) = Sice(k,i,j) - dSice
+          Sbsrf(i,j) = Sbsrf(i,j) + dSice
           dSice = 0                ! Sublimation exhausted
         end if
       end do
@@ -280,7 +285,10 @@ do i = 1, Nx
 
 ! Add snowfall and frost to layer 1 with fresh snow density and grain size
   Esnow = 0
-  if (Esrf(i,j) < 0 .and. Tsrf(i,j) < Tm) Esnow = Esrf(i,j)
+  if (Esrf(i,j) < 0 .and. Tsrf(i,j) < Tm) then
+    Esnow = Esrf(i,j)
+    Sbsrf(i,j) = Esnow*dt
+  end if 
   dSice = (Sf(i,j) - Esnow)*dt
 #if DENSTY == 0
   rhonew = rho0

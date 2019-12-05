@@ -128,6 +128,10 @@ do i = 1, Nx
     else
       KWg(i,j) = gs1(i,j)*KH(i,j) / (gs1(i,j) + KH(i,j))
     end if
+    KHv(i,j) = 0
+    KWv(i,j) = 0
+    KHa(i,j) = 0
+    KHg(i,j) = 0
   else
     KHa(i,j) = fh*vkman*ustar / log((zT1 - dh)/z0)
     ! KHg(i,j) = vkman*ustar*((1 - fveg(i,j))*fh/log(z0/z0h) + fveg(i,j)*cden/(1 + 0.5*Ric))
@@ -145,6 +149,7 @@ do i = 1, Nx
     else
       KWv(i,j) = gsnf*KHv(i,j) / (gsnf + KHv(i,j))
     end if
+    KH(i,j) = 0 
 #if CANMOD == 0
 ! Combined resistances for 0-layer canopy model
     KH(i,j) = KHg(i,j)*(KHa(i,j) + KHv(i,j)) / (KHa(i,j) + KHg(i,j) + KHv(i,j))

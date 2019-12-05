@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 ! Mass baance of canopy snow
 !-----------------------------------------------------------------------
-subroutine CANOPY(Eveg,unload,intcpt)
+subroutine CANOPY(Eveg,unload,intcpt,Sbveg)
 
 #include "OPTS.h"
 
@@ -34,7 +34,8 @@ real, intent(in) :: &
 
 real, intent(out) :: &
   intcpt(Nx,Ny),     &! Canopy interception (kg/m^2)
-  unload(Nx,Ny)       ! Snow mass unloaded from canopy (kg/m^2)
+  unload(Nx,Ny),     &! Snow mass unloaded from canopy (kg/m^2)
+  Sbveg(Nx,Ny)        ! Sublimation from the vegetation (kg/m^2)
 
 real :: &
 
@@ -48,6 +49,8 @@ do j = 1, Ny
 do i = 1, Nx
   unload(i,j) = 0
   intcpt(i,j) = 0
+  Sbveg(i,j)  = 0
+  
   if (fveg(i,j) > 0) then
 
   ! interception
@@ -59,6 +62,8 @@ do i = 1, Nx
     Evegs = 0
     if (Sveg(i,j) > 0 .or. Tveg(i,j) < Tm) Evegs = Eveg(i,j)
     Sveg(i,j) = Sveg(i,j) - Evegs*dt
+    Sbveg(i,j) = Evegs*dt
+    if (Sveg(i,j) < 0) Sbveg(i,j) =  Sbveg(i,j) + Sveg(i,j)
     Sveg(i,j) = max(Sveg(i,j), 0.)
 
   ! unloading

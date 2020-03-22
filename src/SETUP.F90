@@ -20,6 +20,7 @@ implicit none
 character(len=70) :: &
   dmp_file,          &! Dump file name
   met_file,          &! Driving file name
+  tv_file,           &! Transmissivities file name
   runid,             &! Run identifier
   start_file          ! Start file name
 
@@ -49,7 +50,7 @@ real, allocatable :: &
   fsat(:),           &! Initial moisture content of soil layers as fractions of saturation
   Tprof(:)            ! Initial soil layer temperatures (K)
 
-namelist    /drive/ met_file,dt,lat,noon,Pscl,Tlps,Tsnw,zaws,zT,zU
+namelist    /drive/ met_file,tv_file,dt,lat,noon,Pscl,Tlps,Tsnw,zaws,zT,zU
 namelist /gridpnts/ Nsmax,Nsoil,Nx,Ny,ztop_file
 namelist /gridlevs/ Dzsnow,Dzsoil
 namelist  /initial/ fsat,Tprof,start_file
@@ -59,7 +60,8 @@ namelist     /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,trcn,VAI,z0sf,  &
 namelist  /outputs/ Nave,Nsmp,runid
 namelist   /params/ asmx,asmn,avg0,avgs,bstb,bthr,cden,cvai,cveg,eta0,Gcn1,Gcn2,gsat,gsnf,  &
                     hfsn,kdif,kfix,kveg,Nitr,rchd,rchz,rgr0,rho0,rhob,rhoc,rhof,rcld,rmlt,  &
-                    Salb,snda,Talb,tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn
+                    Salb,snda,Talb,tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn,  &
+                    psf,psr,hce,fve,etau,z1
 
 ! Grid parameters
 Nx = 1
@@ -85,6 +87,7 @@ call READ_DEM(ztop_file)
 
 ! Driving data
 met_file = 'met'
+tv_file = 'tv'
 dt = 3600
 lat = 0
 noon = 12
@@ -96,6 +99,7 @@ Tsnw = 2
 zaws = 0
 read(5,drive)
 open(umet, file = met_file)
+open(umtv, file = tv_file)
 allocate(LW(Nx,Ny))
 allocate(Ps(Nx,Ny))
 allocate(Qa(Nx,Ny))
@@ -104,6 +108,7 @@ allocate(Sf(Nx,Ny))
 allocate(SW(Nx,Ny))
 allocate(Ta(Nx,Ny))
 allocate(Ua(Nx,Ny))
+allocate(Tv(Nx,Ny))
 ! Convert units
 lat = (pi/180)*lat  ! degress to radians
 Pscl = 1e-3*Pscl    ! 1/km to 1/m
@@ -152,6 +157,14 @@ tmlt = 100
 trho = 200
 Wirr = 0.03
 z0sn = 0.01
+
+! defaults for additional parameters used in wind and precip scaling
+psf = 1
+psr = 0
+hce = 0
+fve = 0
+etau = 2.5
+z1 = 2
 
 ! Defaults for ground surface parameters
 bstb = 5

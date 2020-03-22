@@ -15,14 +15,15 @@ use PARAMETERS, only: &
 
 implicit none
 
-! Eddy diffusivities
+! Eddy diffusivities & effective wind velocity
 real :: &
   KH(Nx,Ny),         &! Eddy diffusivity for heat to the atmosphere (m/s)
   KHa(Nx,Ny),        &! Eddy diffusivity from the canopy air space (m/s)
   KHg(Nx,Ny),        &! Eddy diffusivity for heat from the ground (m/s)
   KHv(Nx,Ny),        &! Eddy diffusivity for heat from vegetation (m/s)
   KWg(Nx,Ny),        &! Eddy diffusivity for water from the ground (m/s)
-  KWv(Nx,Ny)          ! Eddy diffusivity for water from vegetation (m/s)
+  KWv(Nx,Ny),        &! Eddy diffusivity for water from vegetation (m/s)
+  Uze(Nx,Ny)          ! Local wind speed at reference height z1 (m/s)
 
 ! Surface properties
 real :: &
@@ -56,12 +57,12 @@ real :: &
   Rnet(Nx,Ny),       &! Net radiation (W/m^2)
   Roff(Nx,Ny),       &! Runoff from snow (kg/m^2)
   Rsrf(Nx,Ny),       &! Net radiation absorbed by the surface (W/m^2)
-  SWsrf(Nx,Ny),      &! Net SW radiation absorbed by the surface (W/m^2)
-  SWveg(Nx,Ny),      &! Net SW radiation absorbed by vegetation (W/m^2)
+  SWsrf(Nx,Ny),      &! Net shortwave radiation absorbed by the surface (W/m^2)
+  SWveg(Nx,Ny),      &! Net shortwave radiation absorbed by vegetation (W/m^2)
   Tveg0(Nx,Ny),      &! Vegetation temperature at start of timestep (K)
   LWsci(Nx,Ny),      &! Subcanopy incoming LWR (W/m^2)
-  LWsrf(Nx,Ny),      &! Net LW radiation absorbed by the surface (W/m^2)
-  LWveg(Nx,Ny),      &! Net LW radiation absorbed by vegetation (W/m^2)
+  LWsrf(Nx,Ny),      &! Net longwave radiation absorbed by the surface (W/m^2)
+  LWveg(Nx,Ny),      &! Net longwave radiation absorbed by vegetation (W/m^2)
   SWsci(Nx,Ny),      &! Subcanopy incoming SWR (W/m^2)
   intcpt(Nx,Ny),     &! Canopy interception (kg/m^2)
   unload(Nx,Ny),     &! Snow mass unloaded from canopy (kg/m^2) 
@@ -77,7 +78,7 @@ call THERMAL(csoil,Ds1,gs1,ks1,ksnow,ksoil,Ts1,Tveg0)
 
 do n = 1, Nitr
 
-  call SFEXCH(fsnow,gs1,KH,KHa,KHg,KHv,KWg,KWv)
+  call SFEXCH(fsnow,gs1,KH,KHa,KHg,KHv,KWg,KWv,Uze)
 
 #if CANMOD == 1
   call EBALFOR(Ds1,KHa,KHg,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1,Tveg0, &
@@ -98,7 +99,6 @@ call SNOW(Esrf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff,Sbsrf)
 call SOIL(csoil,Gsoil,ksoil)
 
 call CUMULATE(alb,G,Gsoil,H,Hsrf,LE,LEsrf,Melt,Rnet,Roff,Rsrf, &
-              LWsci,LWsrf,LWveg,SWsci,SWsrf,SWveg,intcpt,unload, & 
-              Sbsrf,Sbveg,KH,KHa,KHg,KHv,KWg,KWv)
+              LWsci,LWsrf,SWsci,SWsrf,Uze)
 
 end subroutine PHYSICS

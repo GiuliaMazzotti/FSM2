@@ -30,6 +30,8 @@ use GRID, only: &
 use PARAMMAPS, only: &
   canh,              &! Canopy heat capacity (J/K/m^2)
   fveg,              &! Canopy cover fraction
+  scap,              &! Canopy snow capacity (kg/m^2)
+  fsky,              &! Terrain shading
   trcn                ! Canopy transmissivity
 
 use STATE_VARIABLES, only : &
@@ -50,8 +52,8 @@ real, intent(in) :: &
   KWg(Nx,Ny),        &! Eddy diffusivity for water from the ground (m/s)
   KWv(Nx,Ny),        &! Eddy diffusivity for water from vegetation (m/s)
   ks1(Nx,Ny),        &! Surface layer thermal conductivity (W/m/K)
-  SWsrf(Nx,Ny),      &! Net SW radiation absorbed by the surface (W/m^2)
-  SWveg(Nx,Ny),      &! Net SW radiation absorbed by vegetation (W/m^2)
+  SWsrf(Nx,Ny),      &! Net shortwave radiation absorbed by the surface (W/m^2)
+  SWveg(Nx,Ny),      &! Net shortwave radiation absorbed by vegetation (W/m^2)
   Ts1(Nx,Ny),        &! Surface layer temperature (K)
   Tveg0(Nx,Ny)        ! Vegetation temperature at start of timestep (K)
 
@@ -67,8 +69,8 @@ real, intent(out) :: &
   Rnet(Nx,Ny),       &! Net radiation (W/m^2)
   Rsrf(Nx,Ny),       &! Net radiation absorbed by the surface (W/m^2)
   LWsci(Nx,Ny),      &! Subcanopy incoming LWR (W/m^2)
-  LWsrf(Nx,Ny),      &! Net LW radiation absorbed by the surface (W/m^2)
-  LWveg(Nx,Ny)        ! Net LW radiation absorbed by vegetation (W/m^2)
+  LWsrf(Nx,Ny),      &! Net longwave radiation absorbed by the surface (W/m^2)
+  LWveg(Nx,Ny)        ! Net longwave radiation absorbed by vegetation (W/m^2)
 
 integer :: & 
   i,j                 ! Point counters
@@ -99,6 +101,7 @@ real :: &
   rho,               &! Air density (kg/m^3)
   Rveg,              &! Net radiation absorbed by vegetation (W/m^2)model
   Ssub                ! Mass of snow available for sublimation (kg/m^2)
+  !fcans            ! Canopy snowcover fraction
 
 ! 1-layer canopy model
 do j = 1, Ny
@@ -126,7 +129,8 @@ do i = 1, Nx
     Hveg = rho*cp*KHv(i,j)*(Tveg(i,j) - Tcan(i,j))
     LE(i,j) = Lsrf*Esrf(i,j) + Lveg*Eveg(i,j)
     Melt(i,j) = 0
-    Rsrf(i,j) = SWsrf(i,j) + trcn(i,j)*LW(i,j) - sb*Tsrf(i,j)**4 + (1 - trcn(i,j))*sb*Tveg(i,j)**4
+    Rsrf(i,j) = SWsrf(i,j) + trcn(i,j)*(fsky(i,j)*LW(i,j) + (1 - fsky(i,j))*sb*Ta(i,j)**4) - & 
+                sb*Tsrf(i,j)**4 + (1 - trcn(i,j))*sb*Tveg(i,j)**4
     Rveg = SWveg(i,j) + (1 - trcn(i,j))*(LW(i,j) + sb*Tsrf(i,j)**4 - 2*sb*Tveg(i,j)**4) 
 
     ! Surface energy balance increments without melt
@@ -180,7 +184,8 @@ do i = 1, Nx
         Esrf(i,j) = rho*KWg(i,j)*(Qsrf - Qcan(i,j))
         G(i,j) = 2*ks1(i,j)*(Tm - Ts1(i,j))/Ds1(i,j)
         Hsrf(i,j) = rho*cp*KHg(i,j)*(Tm - Tcan(i,j))
-        Rsrf(i,j) = SWsrf(i,j) + trcn(i,j)*LW(i,j) - sb*Tm**4 + (1 - trcn(i,j))*sb*Tveg(i,j)**4
+        Rsrf(i,j) = SWsrf(i,j) + trcn(i,j)*(fsky(i,j)*LW(i,j) + (1 - fsky(i,j))*sb*Ta(i,j)**4) &
+                    - sb*Tm**4 + (1 - trcn(i,j))*sb*Tveg(i,j)**4
         Rveg = SWveg(i,j) + (1 - trcn(i,j))*(LW(i,j) + sb*Tm**4 - 2*sb*Tveg(i,j)**4) 
         A(1,3) = 0
         b(1)   = (H(i,j) - Hveg - Hsrf(i,j)) / (rho*cp)
@@ -219,7 +224,8 @@ do i = 1, Nx
     LEsrf(i,j) = Lsrf*Esrf(i,j)
     Rnet(i,j) = SWsrf(i,j) + SWveg(i,j) +  &
                 LW(i,j) - trcn(i,j)*sb*Tsrf(i,j)**4 - (1 - trcn(i,j))*sb*Tveg(i,j)**4
-    LWsci(i,j) = trcn(i,j)*LW(i,j) + (1 - trcn(i,j))*sb*Tveg(i,j)**4
+    LWsci(i,j) = trcn(i,j)*(fsky(i,j)*LW(i,j) + (1 - fsky(i,j))*sb*Ta(i,j)**4) + &
+                 (1 - trcn(i,j))*sb*Tveg(i,j)**4
     LWsrf(i,j) = LWsci(i,j) - sb*Tsrf(i,j)**4
     LWveg(i,j) = (1 - trcn(i,j))*(LW(i,j) + sb*Tsrf(i,j)**4 - 2*sb*Tveg(i,j)**4) 
     

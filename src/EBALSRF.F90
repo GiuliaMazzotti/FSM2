@@ -47,8 +47,8 @@ real, intent(in) :: &
   KWg(Nx,Ny),        &! Eddy diffusivity for water from the ground (m/s)
   KWv(Nx,Ny),        &! Eddy diffusivity for water from vegetation (m/s)
   ks1(Nx,Ny),        &! Surface layer thermal conductivity (W/m/K)
-  SWsrf(Nx,Ny),      &! Net SW radiation absorbed by the surface (W/m^2)
-  SWveg(Nx,Ny),      &! Net SW radiation absorbed by vegetation (W/m^2)
+  SWsrf(Nx,Ny),      &! Net shortwave radiation absorbed by the surface (W/m^2)
+  SWveg(Nx,Ny),      &! Net shortwave radiation absorbed by vegetation (W/m^2)
   Ts1(Nx,Ny)          ! Surface layer temperature (K)
 
 real, intent(out) :: &
@@ -63,8 +63,8 @@ real, intent(out) :: &
   Rnet(Nx,Ny),       &! Net radiation (W/m^2)
   Rsrf(Nx,Ny),       &! Net radiation absorbed by the surface (W/m^2)
   LWsci(Nx,Ny),      &! Subcanopy incoming LWR (W/m^2)
-  LWsrf(Nx,Ny),      &! Net LW radiation absorbed by the surface (W/m^2)
-  LWveg(Nx,Ny)        ! Net LW radiation absorbed by vegetation (W/m^2)
+  LWsrf(Nx,Ny),      &! Net longwave radiation absorbed by the surface (W/m^2)
+  LWveg(Nx,Ny)        ! Net longwave radiation absorbed by vegetation (W/m^2)
 
 integer :: & 
   i,j                 ! Point counters
@@ -89,7 +89,7 @@ do i = 1, Nx
 ! Surface energy balance in forests handled by subroutine EBALFOR
   if (fveg(i,j) == 0) then
 #endif
-
+    ! Tveg = Tcan = Ta at open sites 
     Tveg(i,j) = Ta(i,j) 
     Tcan(i,j) = Ta(i,j) 
 
@@ -166,8 +166,7 @@ do i = 1, Nx
     LWsci(i,j) = LW(i,j)
     LWsrf(i,j) = LWsci(i,j) - sb*Tsrf(i,j)**4
     LWveg(i,j) = 0
-
-
+    
 #if CANMOD == 0
     ! Add fluxes from canopy in zero-layer model
     Eveg(i,j) = 0

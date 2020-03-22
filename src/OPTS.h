@@ -10,5 +10,5 @@
 #define DRIV1D 0   /* 1D driving data format      : 0,1,2  */
 #define DOWNSC 0   /* 1D driving data downscaling : 0,1    */
 #define DEMHDR 0  /* DEM header                  : 0,1    */
-#define SWPART 0  /* SW radiation                : 0,1,2  */
+#define SWPART 1  /* SW radiation                : 0,1,2  */
 #define ZOFFST 1  /* Measurement height offset   : 0,1    */

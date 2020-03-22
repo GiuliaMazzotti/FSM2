@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 ! Surface exchange coefficients
 !-----------------------------------------------------------------------
-subroutine SFEXCH(fsnow,gs1,KH,KHa,KHg,KHv,KWg,KWv)
+subroutine SFEXCH(fsnow,gs1,KH,KHa,KHg,KHv,KWg,KWv,Uze)
 
 #include "OPTS.h"
 
@@ -27,7 +27,11 @@ use PARAMETERS, only : &
   gsnf,              &! Snow-free vegetation moisture conductance (m/s)
   rchd,              &! Ratio of displacement height to canopy height
   rchz,              &! Ratio of roughness length to canopy height
-  z0sn                ! Snow roughness length (m)
+  z0sn,              &! Snow roughness length (m)
+  hce,               &! Stand-scale canopy height (m)
+  fve,               & ! Stand-scale canopy cover fraction
+  etau, &
+  z1                   ! Sub-canopy reference height (m)
 
 use PARAMMAPS, only: &
   hcan,              &! Canopy height (m)
@@ -57,7 +61,8 @@ real, intent(out) :: &
   KHg(Nx,Ny),        &! Eddy diffusivity for heat from the ground (m/s)
   KHv(Nx,Ny),        &! Eddy diffusivity for heat from vegetation (m/s)
   KWg(Nx,Ny),        &! Eddy diffusivity for water from the ground (m/s)
-  KWv(Nx,Ny)          ! Eddy diffusivity for water from vegetation (m/s)
+  KWv(Nx,Ny),        &! Eddy diffusivity for water from vegetation (m/s)
+  Uze(Nx,Ny)          ! Local wind speed at reference height z1 (m/s)
 
 integer :: &
   i,j                 ! Point counters
@@ -76,28 +81,58 @@ real :: &
   z0,                &! Roughness length for momentum (m)
   z0g,               &! Ground surface roughness length (m)
   z0h,               &! Roughness length for heat (m)
-  z0v                 ! Vegetation roughness length (m)
-
+  z0v,               &! Vegetation roughness length (m)
+  fc,                &! Effective canopy cover fraction for wind profile weighting 
+  href,              &! Effective canopy height for dense-canopy wind profile (m)
+  Uz1o,              &! Open-site wind velocity at reference height (m/s)
+  Uz1d,              &! Dense-canopy wind velocity at reference height (m/s)
+  Uh,                &! Wind velocity at canopy top (m/s)
+  KHh,               &! Eddy diffusivity at canopy top (m/s)
+  rad,               &! Aerodynamic resistance between canopy air space and atmosphere in dense canopy, at reference height (s/m)
+  rao,               &! Theoretical aerodynamic resistance at reference height for an open site (s/m)  
+  rgs                 ! Aerodynamic resistance between sub-canopy snow surface and canopy air space in sparse canopy (s/m)
+  
 do j = 1, Ny
 do i = 1, Nx
-
+  
+! canopy height and canopy cover fraction used to determine sparse-canopy wind profile
+  href = hce
+  fc = (9*fve+fveg(i,j))/10  ! Canopy cover fraction used for the local within-canopy wind profile as weighted average 
+                             !  of the stand-scale and the local canopy cover fractions 
+                            
 #if ZOFFST == 0
 ! Heights specified above ground
   zU1 = zU
   zT1 = zT
 #endif
+
 #if ZOFFST == 1
 ! Heights specified above canopy top
-  zU1 = zU + hcan(i,j)
-  zT1 = zT + hcan(i,j)
+  zU1 = zU + href
+  zT1 = zT + href
 #endif
 
 ! Roughness lengths and friction velocity
   z0g = (z0sn**fsnow(i,j)) * (z0sf(i,j)**(1 - fsnow(i,j)))
-  z0v = rchz*hcan(i,j)
+  z0g = (1 + fveg(i,j)) * z0g    ! Minor dependence on ground roughness length on canopy cover fraction 
+  z0h = 0.1 * z0g 
+  z0v = rchz * href
+  dh = rchd * href
+  ustar = vkman * Ua(i,j) / log((zU1 - dh) / z0v)
+  
+  ! open site boundary conditions (logarithmic profile)
+  Uz1o = Ua(i,j) * log(z1 / z0g) / log(zU1 / z0g) 
+  rao = log(zT1 / z1) / (vkman * ustar); 
+
+  ! dense forest boundary conditions (exponential profile)
+  KHh = vkman * ustar *(href-dh)
+  Uh = Ua(i,j) * log((href-dh)/z0v) / log((zU1-dh)/z0v) 
+  Uz1d = Uh * exp(etau * (z1/href-1)) 
+  rad = 1 / (vkman  * ustar) * log((zT1-dh)/(href-dh)) + &
+        href * (exp(etau*(1-z1)/href)-1) /(etau*KHh); 
+
+  ! parameters relevant to open site parametrizations (from earlier FSM2 versions)
   z0  = (z0v**fveg(i,j)) * (z0g**(1 - fveg(i,j)))
-  z0h = 0.1*z0
-  dh = fveg(i,j)*rchd*hcan(i,j)
   CD = (vkman / log((zU1 - dh)/z0))**2
   ustar = sqrt(CD)*Ua(i,j)
 
@@ -121,6 +156,7 @@ do i = 1, Nx
 
 ! Eddy diffusivities
   if (fveg(i,j) == 0) then
+    ustar = vkman * Ua(i,j) / log(zU1/z0g)
     KH(i,j) = fh*vkman*ustar / log(zT1/z0h)
     call QSAT(Ps(i,j),Tsrf(i,j),Qs)
     if (Sice(1,i,j) > 0 .or. Qa(i,j) > Qs) then
@@ -132,11 +168,14 @@ do i = 1, Nx
     KWv(i,j) = 0
     KHa(i,j) = 0
     KHg(i,j) = 0
+    Uze(i,j) = Uz1o
   else
-    KHa(i,j) = fh*vkman*ustar / log((zT1 - dh)/z0)
-    ! KHg(i,j) = vkman*ustar*((1 - fveg(i,j))*fh/log(z0/z0h) + fveg(i,j)*cden/(1 + 0.5*Ric))
-    KHg(i,j) = vkman*ustar*(fsky(i,j)*trcn(i,j)*fh/log(z0/z0h) + (1-fsky(i,j)*trcn(i,j))*cden/(1 + 0.5*Ric))
-    KHv(i,j) = sqrt(ustar)*VAI(i,j)/cveg
+    KHa(i,j) = (fc / rad + (1-fc) / rao) 
+    Uze(i,j) = fc * Uz1d + (1-fc) * Uz1o
+    ustar = vkman * Uz1d / log(z1/z0g) 
+    rgs = 1 / (vkman**2 * Uze(i,j)) * log(z1/z0h) * log(z1/z0g) 
+    KHg(i,j) = 1 / rgs
+    KHv(i,j) = VAI(i,j)*sqrt(Uze(i,j))/cveg; 
     call QSAT(Ps(i,j),Tsrf(i,j),Qs)
     if (Qcan(i,j) > Qs) then
       KWg(i,j) = KHg(i,j)

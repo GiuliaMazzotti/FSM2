@@ -17,7 +17,8 @@ use DRIVING, only: &
   Sdir,              &! Direct-beam shortwave radiation (W/m^2)
   Sf,                &! Snowfall rate (kg/m2/s)
   SW,                &! Incoming shortwave radiation (W/m2)
-  Ta                  ! Air temperature (K)
+  Ta,                &! Air temperature (K)
+  Tv                  ! Time-varying transmissivity for direct shortwave radiation
 
 use GRID, only: &
   Nx,Ny               ! Grid dimensions
@@ -113,7 +114,7 @@ do i = 1, Nx
 #if SNFRAC ==1
   fsnow(i,j) = tanh(snowdepth/hfsn)
 #endif
-  asrf = fsnow(i,j)*albs(i,j) + (1 - fsnow(i,j))*alb0(i,j)
+  asrf = fsnow(i,j)*albs(i,j)*(1-fveg(i,j)*0.2) + (1 - fsnow(i,j))*alb0(i,j) ! canopy density dependence of snow albedo
 ! Partial snowcover on canopy
   fcans = 0
   if (scap(i,j) > epsilon(scap)) fcans = Sveg(i,j) / scap(i,j)
@@ -143,23 +144,35 @@ do i = 1, Nx
   Sdif = fsky(i,j)*Sdif
   tdif = trcn(i,j)
   tdir = 0
-  if (elev > 0) tdir = exp(-(Gcn1 + Gcn2*sin(elev))*VAI(i,j)/sin(elev))
+  if (elev > 0) tdir = Tv(i,j) 
 ! Effective albedo and net radiation
   alb(i,j) = acan + (1 - acan)*asrf*tdif**2
   if (Sdif + Sdir > epsilon(Sdif))  &
-    alb(i,j) = acan + (1 - acan)*asrf*tdif*(tdif*Sdif + tdir*Sdir) / (Sdif + Sdir)
-  SWsrf(i,j) = (1 - acan)*(1 - asrf)*(tdif*Sdif + tdir*Sdir)
-  SWveg(i,j) = (1 - acan)*(1 - (1 - asrf)*tdif - asrf*tdif*tdif)*Sdif +  &
-               (1 - acan)*(1 - (1 - asrf)*tdir - asrf*tdif*tdir)*Sdir
-  SWsci(i,j) = (1 - acan)*(tdif*Sdif + tdir*Sdir)
+    alb(i,j) = (acan*(Sdif+tdir*Sdir) + asrf*tdif*(tdif*Sdif+tdir*Sdir)) / &
+               SW(i,j)
+    SWsrf(i,j) = (1 - asrf)*(tdif*Sdif + tdir*Sdir)
+    SWveg(i,j) = ((1-tdif)*(1-aveg)+tdif*asrf*(1-tdif))*Sdif+ &   
+                (tdir*fveg(i,j)*(1-aveg)+tdir*asrf*(1-tdif))*Sdir   ! local SWR absorption by vegetation correlates with local tdir        
+    SWsci(i,j) = tdif*Sdif + tdir*Sdir
 end do
 end do
 
 ! Add thermal emissions from surroundings
+#if CANMOD == 0
 do j = 1, Ny
 do i = 1, Nx
+  SWveg(i,j) = 0
   LW(i,j) = fsky(i,j)*LW(i,j) + (1 - fsky(i,j))*sb*Ta(i,j)**4
 end do
 end do
+#endif
+
+#if CANMOD == 1
+do j = 1, Ny
+do i = 1, Nx
+  if (fveg(i,j) == 0) LW(i,j) = fsky(i,j)*LW(i,j) + (1 - fsky(i,j))*sb*Ta(i,j)**4
+end do
+end do
+#endif
 
 end subroutine RADIATION

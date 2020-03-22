@@ -17,7 +17,9 @@ use GRID, only: &
 
 use PARAMETERS, only: &
   tcnc,              &! Canopy unloading time scale for cold snow (s)
-  tcnm                ! Canopy unloading time scale for melting snow (s)
+  tcnm,              &! Canopy unloading time scale for melting snow (s)
+  psf,               &! Scaling factor for solid precipitation (within forest stand, at min CC)
+  psr                 ! Range of solid precipitation (within forest stand, spread min-max CC)
 
 use PARAMMAPS, only: &
   fveg,              &! Canopy cover fraction
@@ -56,7 +58,7 @@ do i = 1, Nx
   ! interception
     intcpt(i,j) = (scap(i,j) - Sveg(i,j))*(1 - exp(-fveg(i,j)*Sf(i,j)*dt/scap(i,j)))
     Sveg(i,j) = Sveg(i,j) + intcpt(i,j)
-    Sf(i,j) = (1.1-0.2*fveg(i,j))*Sf(i,j) - intcpt(i,j)/dt
+    Sf(i,j) = (psf-psr*fveg(i,j))*Sf(i,j) - intcpt(i,j)/dt
 
   ! sublimation
     Evegs = 0
@@ -74,6 +76,7 @@ do i = 1, Nx
     Sveg(i,j) = Sveg(i,j) - unload(i,j)
     
   end if
+
 end do
 end do
 

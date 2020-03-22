@@ -62,7 +62,7 @@ real, intent(in) :: &
   ksoil(Nsoil,Nx,Ny),&! Thermal conductivity of soil (W/m/K)
   Melt(Nx,Ny),       &! Surface melt rate (kg/m^2/s)
   unload(Nx,Ny)       ! Snow mass unloaded from canopy (kg/m^2)
-
+  
 real, intent(out) :: &
   Gsoil(Nx,Ny),      &! Heat flux into soil (W/m^2)
   Roff(Nx,Ny),       &! Runoff from snow (kg/m^2)
@@ -182,7 +182,7 @@ do i = 1, Nx
         if (dSice > Sice(k,i,j)) then  ! Layer sublimates completely
           dSice = dSice - Sice(k,i,j)
           Ds(k,i,j) = 0
-          Sbsrf(i,j) = Sbsrf(i,j) + dSice
+          Sbsrf(i,j) = Sbsrf(i,j) + Sice(k,i,j)
           Sice(k,i,j) = 0
         else                       ! Layer sublimates partially
           Ds(k,i,j) = (1 - dSice/Sice(k,i,j))*Ds(k,i,j)
@@ -192,9 +192,9 @@ do i = 1, Nx
         end if
       end do
     end if
-
+    
   ! Snow hydraulics
-    if (Ta(i,j) >= Tm) Roff(i,j) = Roff(i,j) + unload(i,j)
+    if (Ta(i,j) >= Tm) Roff(i,j) = Roff(i,j) + unload(i,j) ! unloading snow is added to liquid water if Ta above freezing point 
 #if HYDROL == 0
   ! Free-draining snow 
     do k = 1, Nsnow(i,j)
@@ -300,8 +300,8 @@ do i = 1, Nx
     rgrn(1,i,j) = (Sice(1,i,j)*rgrn(1,i,j) + dSice*rgr0) / (Sice(1,i,j) + dSice)
   Sice(1,i,j) = Sice(1,i,j) + dSice
 
-! Add canopy unloading to layer 1 with bulk snow density and grain size
-  if (Ta(i,j) < Tm) then
+! Add canopy unloading to layer 1 with bulk snow density and grain size 
+  if (Ta(i,j) < Tm) then  ! only if it's cold enough
     rhos = rhof
     mass = sum(Sice(:,i,j)) + sum(Sliq(:,i,j))
     snowdepth = sum(Ds(:,i,j))

@@ -29,13 +29,15 @@ use DRIVING, only: &
   Pscl,              &! Precipitation adjustment scale (1/km)
   Tlps,              &! Temperature lapse rate (K/km)
   Tsnw,              &! Snow threshold temperature (K)
-  zaws                ! Weather station elevation for downscaling (m)
+  zaws,              &! Weather station elevation for downscaling (m)
+  Tv		              ! Time-varying transmissivity for direct shortwave radiation
 
 use GRID, only: &
   Nx,Ny               ! Grid dimensions
 
 use IOUNITS, only: &
-  umet                ! Driving file unit number
+  umet,               &! Driving meteorological data file unit number
+  umtv			           ! Driving transmissivity data file unit number
 
 use PARAMMAPS, only: &
   ztop                ! Land surface elevations (m)
@@ -58,7 +60,8 @@ real :: &
   Sfp,               &! Snowfall rate (kg/m2/s)
   SWp,               &! Incoming shortwave radiation (W/m2)
   Tap,               &! Air temperature (K)
-  Uap                 ! Wind speed (m/s)
+  Uap,               &! Wind speed (m/s)
+  Tvp(Nx,Ny)          ! Transmissivity for direct shortwave radiation
 
 real :: &
   es,                &! Saturation vapour pressure (Pa)
@@ -67,6 +70,7 @@ real :: &
 #if DRIV1D == 0
 ! FSM driving data
 read(umet,*,end=1) year,month,day,hour,SWp,LWp,Sfp,Rfp,Tap,RHp,Uap,Psp
+read(umtv,*,end=1) Tvp
 #endif
 #if DRIV1D == 1
 ! Extended driving data
@@ -93,6 +97,7 @@ Sf(:,:) = Sfp
 SW(:,:) = SWp 
 Ta(:,:) = Tap
 Ua(:,:) = Uap
+Tv(:,:) = Tvp
 
 #if DOWNSC == 1
 do j = 1, Ny

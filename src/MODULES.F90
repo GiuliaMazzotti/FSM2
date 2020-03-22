@@ -1,4 +1,3 @@
-
 !-----------------------------------------------------------------------
 ! Physical constants
 !-----------------------------------------------------------------------
@@ -37,7 +36,7 @@ integer :: &
   Nave,              &! Number of timesteps in average outputs
   Nsmp                ! Timestep for sample outputs
 integer, parameter :: &
-  Ndiags = 26        ! Number of averaged diagnostics
+  Ndiags = 15        ! Number of averaged diagnostics
 real, allocatable :: &
   diags(:,:,:),      &! Averaged diagnostics
   SWin(:,:),         &! Cumulated incoming solar radiation (J/m^2)
@@ -76,7 +75,8 @@ real, allocatable :: &
   Sf(:,:),           &! Snowfall rate (kg/m^2/s)
   SW(:,:),           &! Incoming shortwave radiation (W/m^2)
   Ta(:,:),           &! Air temperature (K)
-  Ua(:,:)             ! Wind speed (m/s)
+  Ua(:,:),           &! Wind speed (m/s)
+  Tv(:,:) 	          ! Time-varying transmissivity for direct shortwave radiation
 end module DRIVING
 
 !-----------------------------------------------------------------------
@@ -99,6 +99,7 @@ module IOUNITS
 integer, parameter :: &
   umap = 11,         &! Map input file unit number
   umet = 21,         &! Driving input file unit number
+  umtv = 91,         &! Driving transmissivity input file unit number
   ustr = 31,         &! Start file unit number
   uave = 41,         &! Average output file unit number
   udmp = 51,         &! Dump output file unit number
@@ -157,8 +158,16 @@ real :: &
 ! Surface parameters
 real :: &
   gsat                ! Surface conductance for saturated soil (m/s)
-end module PARAMETERS
+! Additional parameters used in precip and wind scaling
+real :: &      
+  psf,               & ! Scaling factor for solid precipitation (within forest stand, at min CC)
+  psr,               & ! Range of solid precipitation (within forest stand, spread min-max CC)
+  hce,               & ! Stand-scale canopy height 
+  fve,               & ! Stand-scale canopy cover fraction
+  etau,              & ! Parameter of exponential wind profile 
+  z1                   ! Sub-canopy reference height (m)
 
+end module PARAMETERS
 !-----------------------------------------------------------------------
 ! Spatial surface characteristics
 !-----------------------------------------------------------------------

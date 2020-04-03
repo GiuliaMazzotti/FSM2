@@ -70,7 +70,6 @@ real :: &
 #if DRIV1D == 0
 ! FSM driving data
 read(umet,*,end=1) year,month,day,hour,SWp,LWp,Sfp,Rfp,Tap,RHp,Uap,Psp
-read(umtv,*,end=1) Tvp
 #endif
 #if DRIV1D == 1
 ! Extended driving data
@@ -80,6 +79,12 @@ read(umet,*,end=1) year,month,day,hour,Sdif,Sdir,LWp,Sfp,Rfp,Tap,RHp,Uap,Psp
 ! ESM-SnowMIP driving data
 read(umet,*,end=1) year,month,day,hour,SWp,LWp,Rfp,Sfp,Tap,Qap,RHp,Uap,Psp
 #endif
+
+#if SWPART == 1
+read(umtv,*,end=1) Tvp
+#else
+Tvp(:,:) = 1
+#endif 
 
 Uap = max(Uap, 0.1)
 #if DRIV1D != 2

@@ -13,15 +13,15 @@ echo #define ALBEDO 1   /* snow albedo                 : 0, 1            */
 echo #define CANMOD 1   /* forest canopy               : 0, 1            */
 echo #define CONDCT 1   /* snow thermal conductivity   : 0, 1            */
 echo #define DENSTY 1   /* snow density                : 0, 1, 2         */
-echo #define EXCHNG 1   /* turbulent exchange          : 0, 1            */
+echo #define EXCHNG 0   /* turbulent exchange          : 0, 1            */
 echo #define HYDROL 1   /* snow hydraulics             : 0, 1            */
 echo #define SNFRAC 1   /* snow cover fraction         : 0, 1            */
 echo /* Driving data options                           : Possible values */
 echo #define DRIV1D 0   /* 1D driving data format      : 0, 1, 2         */
 echo #define DOWNSC 0   /* 1D driving data downscaling : 0, 1            */
 echo #define DEMHDR 0   /* DEM header                  : 0, 1            */
-echo #define SWPART 0   /* SW radiation partition      : 0, 1, 2         */
-echo #define ZOFFST 0   /* Measurement height offset   : 0, 1            */
+echo #define SWPART 1   /* SW radiation partition      : 0, 1, 2         */
+echo #define ZOFFST 1   /* Measurement height offset   : 0, 1            */
 ) > OPTS.h
 
 set mods= MODULES.f90

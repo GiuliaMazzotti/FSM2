@@ -29,9 +29,9 @@ use PARAMETERS, only : &
   rchz,              &! Ratio of roughness length to canopy height
   z0sn,              &! Snow roughness length (m)
   hce,               &! Stand-scale canopy height (m)
-  fve,               & ! Stand-scale canopy cover fraction
-  etau, &
-  z1                   ! Sub-canopy reference height (m)
+  fve,               &! Stand-scale canopy cover fraction
+  etau,              &! Canopy wind decay coefficient
+  z1                  ! Sub-canopy reference height (m)
 
 use PARAMMAPS, only: &
   hcan,              &! Canopy height (m)
@@ -172,7 +172,6 @@ do i = 1, Nx
   else
     KHa(i,j) = (fc / rad + (1-fc) / rao) 
     Uze(i,j) = fc * Uz1d + (1-fc) * Uz1o
-    ustar = vkman * Uz1d / log(z1/z0g) 
     rgs = 1 / (vkman**2 * Uze(i,j)) * log(z1/z0h) * log(z1/z0g) 
     KHg(i,j) = 1 / rgs
     KHv(i,j) = VAI(i,j)*sqrt(Uze(i,j))/cveg; 

@@ -5,16 +5,24 @@
 /
 &drive
   met_file = 'met_Sod_1314.txt'
-  zT = 18
-  zU = 18
+  tv_file = 'tv_Sod.txt'
+  zT = 2
+  zU = 10
   lat = 67.37
   noon = 10
 /
 &params
+  psf = 1.1
+  psr = 0.2
+  hce = 18
+  fve = 0.5
 /
 &maps
-  hcan = 0, 15
-  VAI =  0, 2
+  fsky = 1, 0.9
+  fveg = 0, 0.35
+  hcan = 0, 18
+  trcn = 1, 0.85
+  VAI  = 0, 2
 /
 &initial
 /

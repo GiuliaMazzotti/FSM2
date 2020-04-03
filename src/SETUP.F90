@@ -99,7 +99,6 @@ Tsnw = 2
 zaws = 0
 read(5,drive)
 open(umet, file = met_file)
-open(umtv, file = tv_file)
 allocate(LW(Nx,Ny))
 allocate(Ps(Nx,Ny))
 allocate(Qa(Nx,Ny))
@@ -108,6 +107,9 @@ allocate(Sf(Nx,Ny))
 allocate(SW(Nx,Ny))
 allocate(Ta(Nx,Ny))
 allocate(Ua(Nx,Ny))
+#if SWPART == 1
+open(umtv, file = tv_file)
+#endif
 allocate(Tv(Nx,Ny))
 ! Convert units
 lat = (pi/180)*lat  ! degress to radians

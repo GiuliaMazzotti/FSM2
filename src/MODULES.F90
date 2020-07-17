@@ -160,13 +160,17 @@ real :: &
   gsat                ! Surface conductance for saturated soil (m/s)
 ! Additional parameters used in precip and wind scaling
 real :: &      
-  psf,               & ! Scaling factor for solid precipitation (within forest stand, at min CC)
-  psr,               & ! Range of solid precipitation (within forest stand, spread min-max CC)
-  hce,               & ! Stand-scale canopy height 
-  fve,               & ! Stand-scale canopy cover fraction
-  etau,              & ! Parameter of exponential wind profile 
-  z1                   ! Sub-canopy reference height (m)
-
+  adfs,              &! Forest albedo decay factor - SWR (-) 
+  adfl,              &! Forest albedo decay factor - LWR (-)
+  fsar,              &! Forest snow albedo canopy correction range
+  psf,               &! Scaling factor for solid precipitation (within forest stand, at min CC)
+  psr,               &! Range of solid precipitation (within forest stand, spread min-max CC)
+  wcan,              &! Parameter of exponential wind profile 
+  zsub,              &! Sub-canopy reference height (m)
+  zgf,               &! z0g canopy dependence factors (-)
+  zgr,               &! z0g canopy dependence range (-)
+  khcf                ! Diffusivity correction factor 
+  
 end module PARAMETERS
 !-----------------------------------------------------------------------
 ! Spatial surface characteristics
@@ -184,7 +188,8 @@ real, allocatable :: &
   trcn(:,:),         &! Canopy transmissivity
   VAI(:,:),          &! Vegetation area index
   ztop(:,:),         &! Land surface elevations (m)
-  z0sf(:,:)           ! Snow-free roughness length (m)
+  z0sf(:,:),         &! Snow-free roughness length (m)
+  fves(:,:)           ! Stand-scale canopy cover fraction
 end module PARAMMAPS
 
 !-----------------------------------------------------------------------

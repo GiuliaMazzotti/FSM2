@@ -28,10 +28,11 @@ use PARAMETERS, only : &
   rchd,              &! Ratio of displacement height to canopy height
   rchz,              &! Ratio of roughness length to canopy height
   z0sn,              &! Snow roughness length (m)
-  hce,               &! Stand-scale canopy height (m)
-  fve,               &! Stand-scale canopy cover fraction
-  etau,              &! Canopy wind decay coefficient
-  z1                  ! Sub-canopy reference height (m)
+  wcan,              &! Canopy wind decay coefficient
+  zsub,              &! Sub-canopy reference height (m)
+  zgf,               &! z0g canopy dependence factors (-)
+  zgr,               &! z0g canopy dependence range (-)
+  khcf                ! diffusivity correction factor 
 
 use PARAMMAPS, only: &
   hcan,              &! Canopy height (m)
@@ -39,7 +40,8 @@ use PARAMMAPS, only: &
   VAI,               &! Vegetation area index
   fsky,              &! Sky view fraction
   trcn,              &! Canopy transmissivity
-  z0sf                ! Snow-free surface roughness length (m)
+  z0sf,              &! Snow-free surface roughness length (m)
+  fves                ! stand-scale veg fraction
 
 use STATE_VARIABLES, only : &
   Qcan,              &! Canopy air space humidity
@@ -82,59 +84,63 @@ real :: &
   z0g,               &! Ground surface roughness length (m)
   z0h,               &! Roughness length for heat (m)
   z0v,               &! Vegetation roughness length (m)
-  fc,                &! Effective canopy cover fraction for wind profile weighting 
-  href,              &! Effective canopy height for dense-canopy wind profile (m)
-  Uz1o,              &! Open-site wind velocity at reference height (m/s)
-  Uz1d,              &! Dense-canopy wind velocity at reference height (m/s)
+  Uso,               &! Wind speed at sub-canopy reference height in open (m/s)
+  Usf,               &! Wind speed at sub-canopy reference height in dense forest (m/s)
+  Usub,              &! Wind speed at sub-canopy reference height (m/s)
   Uh,                &! Wind velocity at canopy top (m/s)
   KHh,               &! Eddy diffusivity at canopy top (m/s)
   rad,               &! Aerodynamic resistance between canopy air space and atmosphere in dense canopy, at reference height (s/m)
   rao,               &! Theoretical aerodynamic resistance at reference height for an open site (s/m)  
-  rgs                 ! Aerodynamic resistance between sub-canopy snow surface and canopy air space in sparse canopy (s/m)
-  
+  rgd,               &! Aerodynamic resistance between canopy air space and ground in dense canopy, at reference height (s/m)
+  rgo,               &! Aerodynamic resistance between canopy air space and ground in open, at reference height (s/m)
+  Uc                  ! Wind speed in canopy layer (at height of turbulent flux from veg to cas) (m/s)
+
 do j = 1, Ny
 do i = 1, Nx
   
-! canopy height and canopy cover fraction used to determine sparse-canopy wind profile
-  href = hce
-  fc = (9*fve+fveg(i,j))/10  ! Canopy cover fraction used for the local within-canopy wind profile as weighted average 
-                             !  of the stand-scale and the local canopy cover fractions 
+! ground roughness length
+  z0g = (z0sn**(fsnow(i,j)**1)) * (z0sf(i,j)**(1 - (fsnow(i,j)**1))) 
                             
 #if ZOFFST == 0
 ! Heights specified above ground
   zU1 = zU
   zT1 = zT
 #endif
-
 #if ZOFFST == 1
 ! Heights specified above canopy top
-  zU1 = zU + href
-  zT1 = zT + href
+  zU1 = zU + hcan(i,j)
+  zT1 = zT + hcan(i,j)
 #endif
 
+#if EXCHNG != 2
 ! Roughness lengths and friction velocity
-  z0g = (z0sn**fsnow(i,j)) * (z0sf(i,j)**(1 - fsnow(i,j)))
-  z0g = (1 + fveg(i,j)) * z0g    ! Minor dependence on ground roughness length on canopy cover fraction 
-  z0h = 0.1 * z0g 
-  z0v = rchz * href
-  dh = rchd * href
-  ustar = vkman * Ua(i,j) / log((zU1 - dh) / z0v)
-  
-  ! open site boundary conditions (logarithmic profile)
-  Uz1o = Ua(i,j) * log(z1 / z0g) / log(zU1 / z0g) 
-  rao = log(zT1 / z1) / (vkman * ustar); 
-
-  ! dense forest boundary conditions (exponential profile)
-  KHh = vkman * ustar *(href-dh)
-  Uh = Ua(i,j) * log((href-dh)/z0v) / log((zU1-dh)/z0v) 
-  Uz1d = Uh * exp(etau * (z1/href-1)) 
-  rad = 1 / (vkman  * ustar) * log((zT1-dh)/(href-dh)) + &
-        href * (exp(etau*(1-z1)/href)-1) /(etau*KHh); 
-
-  ! parameters relevant to open site parametrizations (from earlier FSM2 versions)
+  z0v = rchz*hcan(i,j)
   z0  = (z0v**fveg(i,j)) * (z0g**(1 - fveg(i,j)))
+  z0h = 0.1*z0
+  dh = fveg(i,j)*rchd*hcan(i,j)
   CD = (vkman / log((zU1 - dh)/z0))**2
   ustar = sqrt(CD)*Ua(i,j)
+#endif
+
+#if EXCHNG == 2
+  ! Open site calculations
+  z0h = 0.1 * z0g 
+  Uso = Ua(i,j)*log(zsub/z0g)/log(zU/z0g)
+  ustar = vkman*Ua(i,j)/log(zU/z0g) ! open site friction velocity
+  rgo = log(zT/z0h)/(vkman*ustar) 
+
+  ! Forest site calculations
+  if (fveg(i,j) > 0) then
+    z0g = (zgf + zgr*fveg(i,j)) * z0g    
+    z0h = 0.1 * z0g
+    dh = rchd * hcan(i,j) 
+    z0v = rchz * hcan(i,j) 
+    ustar = vkman*Ua(i,j)/log((zU1 - dh)/z0v)
+    Uh = (ustar/vkman)*log((hcan(i,j) - dh)/z0v)
+    KHh = vkman*ustar*(hcan(i,j) - dh)
+    Usf = exp(wcan*(zsub/hcan(i,j) - 1))*Uh
+  end if
+#endif 
 
 #if EXCHNG == 0
 ! No stability adjustment
@@ -156,7 +162,6 @@ do i = 1, Nx
 
 ! Eddy diffusivities
   if (fveg(i,j) == 0) then
-    ustar = vkman * Ua(i,j) / log(zU1/z0g)
     KH(i,j) = fh*vkman*ustar / log(zT1/z0h)
     call QSAT(Ps(i,j),Tsrf(i,j),Qs)
     if (Sice(1,i,j) > 0 .or. Qa(i,j) > Qs) then
@@ -168,13 +173,22 @@ do i = 1, Nx
     KWv(i,j) = 0
     KHa(i,j) = 0
     KHg(i,j) = 0
-    Uze(i,j) = Uz1o
   else
-    KHa(i,j) = (fc / rad + (1-fc) / rao) 
-    Uze(i,j) = fc * Uz1d + (1-fc) * Uz1o
-    rgs = 1 / (vkman**2 * Uze(i,j)) * log(z1/z0h) * log(z1/z0g) 
-    KHg(i,j) = 1 / rgs
-    KHv(i,j) = VAI(i,j)*sqrt(Uze(i,j))/cveg; 
+#if EXCHNG != 2
+    KHa(i,j) = fh*vkman*ustar / log((zT1 - dh)/z0)
+    KHg(i,j) = vkman*ustar*((1 - fveg(i,j))*fh/log(z0/z0h) + fveg(i,j)*cden/(1 + 0.5*Ric))
+    KHv(i,j) = sqrt(ustar)*VAI(i,j)/cveg
+#endif
+#if EXCHNG == 2
+    rad = (log((zT1 - dh)/(hcan(i,j)- dh))/(vkman*ustar) +  & 
+       hcan(i,j)*(exp(wcan*(1 -(z0v + dh)/hcan(i,j))) - 1)/(wcan*KHh))/khcf
+    KHa(i,j) = sqrt(fves(i,j))/ rad 
+    Usub = sqrt(fves(i,j))*Usf + (1 - sqrt(fves(i,j)))*Uso
+    rgd = 1 / (vkman**2 * Usub) * log(zsub/z0h) * log(zsub/z0g) 
+    KHg(i,j)  = 1/rgd
+    Uc = exp(wcan*((z0v + dh)/hcan(i,j) - 1))*Uh
+    KHv(i,j) = VAI(i,j)*sqrt(Uc)/cveg 
+#endif
     call QSAT(Ps(i,j),Tsrf(i,j),Qs)
     if (Qcan(i,j) > Qs) then
       KWg(i,j) = KHg(i,j)
@@ -188,12 +202,14 @@ do i = 1, Nx
       KWv(i,j) = gsnf*KHv(i,j) / (gsnf + KHv(i,j))
     end if
     KH(i,j) = 0 
+  end if 
+  Uze(i,j) = Usub
+
 #if CANMOD == 0
 ! Combined resistances for 0-layer canopy model
     KH(i,j) = KHg(i,j)*(KHa(i,j) + KHv(i,j)) / (KHa(i,j) + KHg(i,j) + KHv(i,j))
     KWg(i,j) = KWg(i,j)*(KHa(i,j) + KWv(i,j)) / (KHa(i,j) + KWg(i,j) + KWv(i,j))
 #endif
-  end if
 
 end do
 end do

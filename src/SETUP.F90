@@ -36,7 +36,8 @@ character(len=70) :: &
   trcn_file,         &! Canopy transmissivity map file name
   VAI_file,          &! Vegetation area index map file name
   z0sf_file,         &! Snow-free roughness length map file name
-  ztop_file           ! DEM file name
+  ztop_file,         &! DEM file name
+  fves_file            ! Stand-scale fveg file name
 
 integer :: & 
   i,j,               &! Point counters
@@ -54,14 +55,14 @@ namelist    /drive/ met_file,tv_file,dt,lat,noon,Pscl,Tlps,Tsnw,zaws,zT,zU
 namelist /gridpnts/ Nsmax,Nsoil,Nx,Ny,ztop_file
 namelist /gridlevs/ Dzsnow,Dzsoil
 namelist  /initial/ fsat,Tprof,start_file
-namelist     /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,trcn,VAI,z0sf,  &
+namelist     /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,trcn,VAI,z0sf,fves,  &
                     alb0_file,canh_file,fcly_file,fsnd_file,fsky_file,fveg_file, &
-                    hcan_file,scap_file,trcn_file,VAI_file,z0sf_file 
-namelist  /outputs/ Nave,Nsmp,runid
+                    hcan_file,scap_file,trcn_file,VAI_file,z0sf_file,fves_file 
+namelist  /outputs/ Nave,Nsmp,runid,dmp_file
 namelist   /params/ asmx,asmn,avg0,avgs,bstb,bthr,cden,cvai,cveg,eta0,Gcn1,Gcn2,gsat,gsnf,  &
                     hfsn,kdif,kfix,kveg,Nitr,rchd,rchz,rgr0,rho0,rhob,rhoc,rhof,rcld,rmlt,  &
                     Salb,snda,Talb,tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn,  &
-                    psf,psr,hce,fve,etau,z1
+                    adfs,adfl,fsar,psf,psr,wcan,zsub,zgf,zgr,khcf
 
 ! Grid parameters
 Nx = 1
@@ -160,13 +161,18 @@ trho = 200
 Wirr = 0.03
 z0sn = 0.01
 
-! defaults for additional parameters used in wind and precip scaling
-psf = 1
-psr = 0
-hce = 0
-fve = 0
-etau = 2.5
-z1 = 2
+! defaults for additional parameters used in wind and precip scaling, 
+! turbulent exchange and forest snow surface properties corrections
+adfs = 1
+adfl = 1
+fsar = 0
+psf  = 1
+psr  = 0
+wcan = 2.5
+zsub = 2
+zgf = 1
+zgr = 0
+khcf = 1
 
 ! Defaults for ground surface parameters
 bstb = 5
@@ -190,6 +196,7 @@ allocate(scap(Nx,Ny))
 allocate(trcn(Nx,Ny))
 allocate(VAI(Nx,Ny))
 allocate(z0sf(Nx,Ny))
+allocate(fves(Nx,Ny))
 alb0_file = 'none'
 canh_file = 'none'
 fcly_file = 'none'
@@ -201,17 +208,19 @@ scap_file = 'none'
 trcn_file = 'none'
 VAI_file  = 'none'
 z0sf_file = 'none'
+fves_file = 'none'
 alb0(:,:) = 0.2
 canh(:,:) = -1
 fcly(:,:) = 0.3
 fsnd(:,:) = 0.6
 fsky(:,:) = 1
-fveg(:,:) = -1
+fveg(:,:) = -1    
 hcan(:,:) = 0
 scap(:,:) = -1
 trcn(:,:) = -1
 VAI(:,:)  = 0
 z0sf(:,:) = 0.1
+fves(:,:) = -1
 read(5,maps)
 call READMAPS(alb0_file,alb0)
 call READMAPS(canh_file,canh)
@@ -224,10 +233,12 @@ call READMAPS(scap_file,scap)
 call READMAPS(trcn_file,trcn)
 call READMAPS(VAI_file,VAI)
 call READMAPS(z0sf_file,z0sf)
-if (canh(1,1) < 0) canh(:,:) = 2500*VAI(:,:)
+call READMAPS(fves_file,fves)
+if (canh(1,1) < 0) canh(:,:) = 25000*VAI(:,:)
 if (trcn(1,1) < 0) trcn(:,:) = exp(-kdif*VAI(:,:))
 if (fveg(1,1) < 0) fveg(:,:) = 1 - exp(-kveg*VAI(:,:))
 if (scap(1,1) < 0) scap(:,:) = cvai*VAI(:,:)
+if (fves(1,1) < 0) fves(:,:) = 1 - exp(-kveg*VAI(:,:))
 
 ! Derived soil parameters
 allocate(b(Nx,Ny))
@@ -306,6 +317,7 @@ if (start_file /= 'none') then
   read(ustr,*) Ds(:,:,:)
   read(ustr,*) Nsnow(:,:)
   read(ustr,*) Qcan(:,:)
+  read(ustr,*) rgrn(:,:,:)
   read(ustr,*) Sice(:,:,:)
   read(ustr,*) Sliq(:,:,:)
   read(ustr,*) Sveg(:,:)
@@ -370,6 +382,8 @@ open(usmp, file = trim(runid) // 'smp')
 #define ALBEDO_OPT 'snow albedo a function of temperature'
 #elif ALBEDO == 1
 #define ALBEDO_OPT 'snow albedo a function of age'
+#elif ALBEDO == 2
+#define ALBEDO_OPT 'snow albedo a function of age, canopy strucutre and radiative properties'
 #endif
 #if CANMOD == 0
 #define CANMOD_OPT 'zero layer canopy model'
@@ -392,6 +406,8 @@ open(usmp, file = trim(runid) // 'smp')
 #define EXCHNG_OPT 'constant surface exchange coefficient'
 #elif EXCHNG == 1
 #define EXCHNG_OPT 'surface exchange coefficient a function of Richardson number'
+#elif EXCHNG == 2
+#define EXCHNG_OPT 'explicit sub-canopy wind profile'
 #endif
 #if HYDROL == 0
 #define HYDROL_OPT 'freely draining snow'

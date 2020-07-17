@@ -35,7 +35,10 @@ use PARAMETERS, only: &
   Salb,              &! Snowfall to refresh albedo (kg/m^2)
   Talb,              &! Albedo decay temperature threshold (C)
   tcld,              &! Cold snow albedo decay timescale (s)
-  tmlt                ! Melting snow albedo decay timescale (s)
+  tmlt,              &! Melting snow albedo decay timescale (s)
+  adfs,              &! Forest albedo decay factor - SWR (-)
+  adfl,              &! Forest albedo decay factor - LWR (-)
+  fsar                ! forest snow albedo canopy correction range
 
 use PARAMMAPS, only: &
   alb0,              &! Snow-free ground albedo
@@ -98,6 +101,22 @@ do i = 1, Nx
   alim = (asmn/tau + Sf(i,j)*asmx/Salb)/rt
   albs(i,j) = alim + (albs(i,j) - alim)*exp(-rt*dt)
 #endif
+#if ALBEDO == 2
+  tau = tcld
+  if (Tsrf(i,j) >= Tm) tau = tmlt
+#if SWPART == 1
+  if (fveg(i,j) > 0 .and. elev > 0) tau = tau/((1-trcn(i,j)*fsky(i,j)) & 
+                                          * (1+adfl*Tv(i,j)) + adfs*Tv(i,j))
+#endif
+#if SWPART == 0                                     
+  if (fveg(i,j) > 0 .and. elev > 0) tau = tau/((1-trcn(i,j)*fsky(i,j)) & 
+                                          + adfs*trcn(i,j)*fsky(i,j))
+#endif 
+  if (fveg(i,j) > 0 .and. elev <= 0) tau = tau/(2-trcn(i,j)*fsky(i,j))
+  rt = 1/tau + Sf(i,j)/Salb
+  alim = (asmn/tau + Sf(i,j)*asmx/Salb)/rt
+  albs(i,j) = alim + (albs(i,j) - alim)*exp(-rt*dt)
+#endif
   if (albs(i,j) < min(asmx, asmn)) albs(i,j) = min(asmx, asmn)
   if (albs(i,j) > max(asmx, asmn)) albs(i,j) = max(asmx, asmn)
 end do
@@ -114,7 +133,12 @@ do i = 1, Nx
 #if SNFRAC ==1
   fsnow(i,j) = tanh(snowdepth/hfsn)
 #endif
-  asrf = fsnow(i,j)*albs(i,j)*(1-fveg(i,j)*0.2) + (1 - fsnow(i,j))*alb0(i,j) ! canopy density dependence of snow albedo
+#if ALBEDO != 2
+  asrf = fsnow(i,j)*albs(i,j) + (1 - fsnow(i,j))*alb0(i,j) 
+#endif
+#if ALBEDO == 2
+  asrf = fsnow(i,j)*albs(i,j)*(1-fveg(i,j)*fsar) + (1 - fsnow(i,j))*alb0(i,j)
+#endif
 ! Partial snowcover on canopy
   fcans = 0
   if (scap(i,j) > epsilon(scap)) fcans = Sveg(i,j) / scap(i,j)
